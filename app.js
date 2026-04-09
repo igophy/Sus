@@ -1,59 +1,189 @@
 (() => {
-  const { departments, siteData, buildings } = window.APP_DATA;
-  const state = {
-    query: "", building: "Alle", category: "Alle", floor: "Alle", activeBuilding: "A", compact: false, tab: "results",
-    favorites: JSON.parse(localStorage.getItem("sus-v3-favorites") || "[]"),
-    recent: JSON.parse(localStorage.getItem("sus-v3-recent") || "[]"),
-    recentSearches: JSON.parse(localStorage.getItem("sus-v3-recent-searches") || "[]")
+  const { departments, site, buildings } = window.APP_DATA;
+  const params = new URLSearchParams(location.search);
+  const page = document.body.dataset.page;
+
+  const byId = Object.fromEntries(departments.map(d => [d.id, d]));
+  const score = (item, q) => {
+    if (!q) return 1;
+    q = q.toLowerCase().trim();
+    let s = 0;
+    [item.name, item.category, item.building, item.floor, item.zone, item.bestEntrance, ...(item.keywords||[])].forEach(v => {
+      const t = String(v).toLowerCase();
+      if (t === q) s += 100;
+      else if (t.startsWith(q)) s += 50;
+      else if (t.includes(q)) s += 20;
+    });
+    return s;
   };
-  const $ = (id) => document.getElementById(id);
-  const els = {searchInput:$("searchInput"),buildingFilter:$("buildingFilter"),categoryFilter:$("categoryFilter"),floorFilter:$("floorFilter"),toggleViewBtn:$("toggleViewBtn"),clearBtn:$("clearBtn"),quickActions:$("quickActions"),buildingButtons:$("buildingButtons"),resultsList:$("resultsList"),statusText:$("statusText"),warningBox:$("warningBox"),buildingSummary:$("buildingSummary"),buildingOverview:$("buildingOverview"),favoritesList:$("favoritesList"),recentList:$("recentList"),recentSearches:$("recentSearches"),addressText:$("addressText"),phoneLink:$("phoneLink"),openMapsBtn:$("openMapsBtn"),callBtn:$("callBtn"),parkingBox:$("parkingBox"),hoursBox:$("hoursBox"),transportBox:$("transportBox"),tabs:[...document.querySelectorAll(".tab")],panels:{results:$("resultsTab"),buildings:$("buildingsTab"),places:$("placesTab"),practical:$("practicalTab")},template:$("departmentCardTemplate")};
-  const save = (k,v)=>localStorage.setItem(k, JSON.stringify(v));
-  const uniq = (a)=>[...new Set(a)];
-  const toast = (t)=>{ let n=document.querySelector(".toast"); if(!n){n=document.createElement("div"); n.className="toast"; document.body.appendChild(n);} n.textContent=t; n.classList.add("show"); setTimeout(()=>n.classList.remove("show"),1400); };
-  const score = (item,q)=>{ if(!q) return item.priority||0; q=q.trim().toLowerCase(); let total=item.priority||0; const fields=[item.name,item.category,item.building,item.buildingLabel,item.floor,item.zone,item.bestEntrance,...(item.keywords||[])].map(v=>String(v).toLowerCase()); fields.forEach((f,i)=>{ if(f===q) total+=100-i; else if(f.startsWith(q)) total+=45-i; else if(f.includes(q)) total+=20-i; }); return total; };
-  const filtered = ()=>departments.filter(i=>state.building==="Alle"||i.building===state.building).filter(i=>state.category==="Alle"||i.category===state.category).filter(i=>state.floor==="Alle"||i.floor===state.floor).map(i=>({...i,score:score(i,state.query)})).filter(i=>!state.query||i.score>0).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,"no"));
-  function setTab(tab){ state.tab=tab; els.tabs.forEach(t=>t.classList.toggle("tab--active", t.dataset.tab===tab)); Object.entries(els.panels).forEach(([k,p])=>{const active=k===tab; p.hidden=!active; p.classList.toggle("tab-panel--active",active);}); }
-  function setActiveBuilding(code){ state.activeBuilding=code; document.querySelectorAll(".building-tile").forEach(b=>b.classList.toggle("is-active", b.dataset.building===code)); renderBuildingSummary(); }
-  function pushRecent(id){ state.recent=[id,...state.recent.filter(v=>v!==id)].slice(0,8); save("sus-v3-recent", state.recent); }
-  function pushSearch(q){ q=q.trim(); if(!q) return; state.recentSearches=[q,...state.recentSearches.filter(v=>v!==q)].slice(0,8); save("sus-v3-recent-searches", state.recentSearches); }
-  function toggleFavorite(id){ state.favorites=state.favorites.includes(id)?state.favorites.filter(v=>v!==id):[...state.favorites,id]; save("sus-v3-favorites", state.favorites); renderResults(); renderPlaces(); }
-  function copyText(text){ navigator.clipboard.writeText(text).then(()=>toast("Kopiert")).catch(()=>toast("Kunne ikke kopiere")); }
-  function shareText(text,title){ if(navigator.share){ navigator.share({title,text}).catch(()=>{});} else copyText(text); }
-  function createCard(item){
-    const fragment=els.template.content.cloneNode(true);
-    fragment.querySelector(".department-card__name").textContent=item.name;
-    fragment.querySelector(".department-card__category").textContent=item.category;
-    const bb=fragment.querySelector(".building-badge"); bb.textContent=item.buildingLabel; bb.classList.add(`building-${item.building}`);
-    fragment.querySelector(".floor-badge").textContent=`${item.floor}. etasje`;
-    fragment.querySelector(".zone-badge").textContent=item.zone;
-    fragment.querySelector(".entry-text").textContent=item.bestEntrance;
-    fragment.querySelector(".department-card__hint").textContent=item.routeHint;
-    const fav=fragment.querySelector(".favorite-btn"); const saved=state.favorites.includes(item.id); fav.textContent=saved?"★":"☆"; fav.classList.toggle("saved", saved); fav.onclick=()=>toggleFavorite(item.id);
-    const shareValue=`${item.name} – ${item.buildingLabel}, ${item.floor}. etasje. Beste inngang: ${item.bestEntrance}.`;
-    fragment.querySelector(".copy-btn").onclick=()=>copyText(shareValue);
-    fragment.querySelector(".share-btn").onclick=()=>shareText(shareValue, item.name);
-    const details=fragment.querySelector(".details-box");
-    fragment.querySelector(".details-btn").onclick=()=>{ const open=!details.hidden; details.hidden=open; if(!open){ details.innerHTML=`<div class="details-grid"><div><strong>Bygg</strong><span>${item.buildingLabel}</span></div><div><strong>Etasje</strong><span>${item.floor}. etasje</span></div><div><strong>Sone</strong><span>${item.zone}</span></div><div><strong>Beste inngang</strong><span>${item.bestEntrance}</span></div></div><p class="details-hint"><strong>Slik finner du fram:</strong> ${item.routeHint}</p>`; pushRecent(item.id); renderPlaces(); }};
-    if(state.compact){ const card=fragment.querySelector(".department-card"); card.classList.add("compact"); fragment.querySelector(".department-card__category").hidden=true; fragment.querySelector(".department-card__route").hidden=true; fragment.querySelector(".department-card__hint").hidden=true; fragment.querySelector(".button-row").hidden=true; }
-    return fragment;
+  const enc = encodeURIComponent;
+
+  function buildingClass(code){ return "b" + code; }
+
+  function renderIndex(){
+    const quick = document.getElementById("quick");
+    site.quick.forEach(entry => {
+      quick.insertAdjacentHTML("beforeend", `<a class="button" href="search.html?q=${enc(entry.q)}">${entry.label}</a>`);
+    });
+
+    const builds = document.getElementById("buildings");
+    Object.entries(buildings).forEach(([code, info]) => {
+      builds.insertAdjacentHTML("beforeend", `
+        <a class="tile" href="building.html?code=${code}">
+          <strong>${info.label}</strong>
+          <span>${info.desc}</span>
+        </a>
+      `);
+    });
+
+    const form = document.getElementById("searchForm");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const q = document.getElementById("searchInput").value.trim();
+      if (!q) return;
+      location.href = `search.html?q=${enc(q)}`;
+    });
   }
-  function renderResults(){ const items=filtered(); els.resultsList.innerHTML=""; els.statusText.textContent=`${items.length} treff`; const warning=/våland|valand/i.test(state.query); els.warningBox.hidden=!warning; els.warningBox.textContent="Søket ser ut til å gjelde Våland. Denne appen er laget for Ullandhaug."; if(!items.length){ els.resultsList.innerHTML=`<div class="panel empty"><h3>Ingen treff</h3><p>Prøv et enklere ord, for eksempel akutt, barn, røntgen eller føde.</p></div>`; return; } items.forEach(item=>els.resultsList.appendChild(createCard(item))); }
-  function renderQuick(){ siteData.quickActions.forEach(entry=>{ const b=document.createElement("button"); b.className="chip"; b.textContent=entry.label; b.onclick=()=>{ state.query=entry.query; els.searchInput.value=entry.query; pushSearch(entry.query); setTab("results"); renderResults(); }; els.quickActions.appendChild(b);});}
-  function renderBuildingButtons(){ Object.entries(buildings).forEach(([code, info])=>{ const b=document.createElement("button"); b.className=`building-tile building-${code}`; b.dataset.building=code; b.innerHTML=`<strong>${info.label}</strong><span>${info.description}</span>`; b.onclick=()=>{ state.building=code; els.buildingFilter.value=code; setActiveBuilding(code); setTab("buildings"); renderResults();}; els.buildingButtons.appendChild(b);});}
-  function renderBuildingSummary(){ const info=buildings[state.activeBuilding]; const count=departments.filter(d=>d.building===state.activeBuilding).length; els.buildingSummary.innerHTML=`<p><span class="building-badge building-${state.activeBuilding}">${info.label}</span></p><p>${info.description}</p><p><strong>Inngang:</strong> ${info.entry}</p><p class="muted">${count} registrerte avdelinger i dette bygget.</p>`; }
-  function renderBuildingOverview(){ els.buildingOverview.innerHTML=""; Object.entries(buildings).forEach(([code,info])=>{ const wrapper=document.createElement("section"); wrapper.className="panel"; const items=departments.filter(d=>d.building===code).sort((a,b)=>Number(a.floor)-Number(b.floor)||a.name.localeCompare(b.name,"no")); wrapper.innerHTML=`<div class="building-section-head"><div><span class="building-badge building-${code}">${info.label}</span><p class="muted">${info.description}</p></div><button class="button button--secondary" type="button">Velg bygg</button></div><p><strong>Inngang:</strong> ${info.entry}</p>`; wrapper.querySelector("button").onclick=()=>{ state.building=code; els.buildingFilter.value=code; setActiveBuilding(code); setTab("results"); renderResults();}; const groups={}; items.forEach(i=>(groups[i.floor]??=[]).push(i)); Object.keys(groups).sort((a,b)=>Number(a)-Number(b)).forEach(f=>{ const g=document.createElement("div"); g.className="floor-group"; g.innerHTML=`<h3>${f}. etasje</h3>`; const list=document.createElement("div"); list.className="mini-list"; groups[f].forEach(i=>{ const x=document.createElement("button"); x.className="mini-item"; x.textContent=i.name; x.onclick=()=>{ state.query=i.name; els.searchInput.value=i.name; pushSearch(i.name); setActiveBuilding(code); setTab("results"); renderResults();}; list.appendChild(x);}); g.appendChild(list); wrapper.appendChild(g);}); els.buildingOverview.appendChild(wrapper);}); }
-  function createPlaceRow(item){ const r=document.createElement("button"); r.className="place-row"; r.innerHTML=`<strong>${item.name}</strong><span>${item.buildingLabel} · ${item.floor}. etasje</span>`; r.onclick=()=>{ state.query=item.name; els.searchInput.value=item.name; setActiveBuilding(item.building); setTab("results"); renderResults();}; return r; }
-  function renderPlaces(){ const favs=departments.filter(i=>state.favorites.includes(i.id)); const rec=state.recent.map(id=>departments.find(i=>i.id===id)).filter(Boolean); els.favoritesList.innerHTML=favs.length?"":"<p class='muted'>Ingen favoritter ennå.</p>"; favs.forEach(i=>els.favoritesList.appendChild(createPlaceRow(i))); els.recentList.innerHTML=rec.length?"":"<p class='muted'>Ingen nylig åpnet ennå.</p>"; rec.forEach(i=>els.recentList.appendChild(createPlaceRow(i))); els.recentSearches.innerHTML=state.recentSearches.length?"":"<p class='muted'>Ingen siste søk ennå.</p>"; state.recentSearches.forEach(term=>{ const b=document.createElement("button"); b.className="chip"; b.textContent=term; b.onclick=()=>{ state.query=term; els.searchInput.value=term; setTab("results"); renderResults(); }; els.recentSearches.appendChild(b); }); }
-  function renderPractical(){ els.addressText.textContent=siteData.address; els.phoneLink.textContent=siteData.phone; els.phoneLink.href=`tel:${siteData.phone.replace(/\s+/g,"")}`; els.openMapsBtn.onclick=()=>window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteData.address)}`,"_blank"); els.callBtn.onclick=()=>location.href=`tel:${siteData.phone.replace(/\s+/g,"")}`; els.parkingBox.innerHTML=`<p><strong>${siteData.parking.name}</strong><br>${siteData.parking.address}</p><ul class="tips">${siteData.parking.notes.map(n=>`<li>${n}</li>`).join("")}</ul>`; els.hoursBox.innerHTML=""; siteData.openingHours.forEach(h=>{ const row=document.createElement("div"); row.className="hours-row"; row.innerHTML=`<strong>${h.label}</strong><span>${h.value}</span>`; els.hoursBox.appendChild(row);}); els.transportBox.innerHTML=`<p><strong>Buss:</strong> ${siteData.publicTransport.bus}</p><p><strong>Tog:</strong> ${siteData.publicTransport.train}</p><p><strong>Droppsoner:</strong></p><ul class="tips">${siteData.dropZones.map(z=>`<li>${z}</li>`).join("")}</ul>`; }
-  function populateFilters(){ [...new Set(departments.map(d=>d.category))].sort((a,b)=>a.localeCompare(b,"no")).forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; els.categoryFilter.appendChild(o);}); [...new Set(departments.map(d=>d.floor))].sort((a,b)=>Number(a)-Number(b)).forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=`${v}. etasje`; els.floorFilter.appendChild(o);}); }
-  els.searchInput.oninput=(e)=>{ state.query=e.target.value; renderResults(); };
-  els.searchInput.onchange=(e)=>{ pushSearch(e.target.value); renderPlaces(); };
-  els.buildingFilter.onchange=(e)=>{ state.building=e.target.value; if(state.building!=="Alle") setActiveBuilding(state.building); renderResults(); };
-  els.categoryFilter.onchange=(e)=>{ state.category=e.target.value; renderResults(); };
-  els.floorFilter.onchange=(e)=>{ state.floor=e.target.value; renderResults(); };
-  els.toggleViewBtn.onclick=()=>{ state.compact=!state.compact; els.toggleViewBtn.textContent=state.compact?"Detaljert visning":"Kompakt visning"; renderResults(); };
-  els.clearBtn.onclick=()=>{ state.query=""; state.building="Alle"; state.category="Alle"; state.floor="Alle"; els.searchInput.value=""; els.buildingFilter.value="Alle"; els.categoryFilter.value="Alle"; els.floorFilter.value="Alle"; renderResults(); };
-  els.tabs.forEach(t=>t.onclick=()=>setTab(t.dataset.tab));
-  populateFilters(); renderQuick(); renderBuildingButtons(); renderBuildingSummary(); renderBuildingOverview(); renderPlaces(); renderPractical(); renderResults(); setActiveBuilding("A");
+
+  function renderSearch(){
+    const q = params.get("q") || "";
+    const searchInput = document.getElementById("searchInput");
+    searchInput.value = q;
+    const resultsEl = document.getElementById("results");
+    const countEl = document.getElementById("count");
+
+    const items = departments
+      .map(d => ({...d, score: score(d, q)}))
+      .filter(d => !q || d.score > 0)
+      .sort((a,b) => b.score - a.score || a.name.localeCompare(b.name, "no"));
+
+    countEl.textContent = `${items.length} treff`;
+
+    if (!items.length) {
+      resultsEl.innerHTML = `<div class="card result"><h2>Ingen treff</h2><p class="muted">Prøv et enklere ord, for eksempel akutt, barn, radiologi eller føde.</p></div>`;
+    } else {
+      resultsEl.innerHTML = items.map(item => `
+        <a class="card result" href="department.html?id=${item.id}">
+          <div>
+            <h2>${item.name}</h2>
+            <p class="muted">${item.category}</p>
+          </div>
+          <div class="badges">
+            <span class="badge ${buildingClass(item.building)}">${item.building}-bygget</span>
+            <span class="badge">${item.floor}. etasje</span>
+          </div>
+          <p><strong>Beste inngang:</strong> ${item.bestEntrance}</p>
+          <p class="muted small">${item.routeHint}</p>
+        </a>
+      `).join("");
+    }
+
+    document.getElementById("searchForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const next = searchInput.value.trim();
+      location.href = `search.html?q=${enc(next)}`;
+    });
+  }
+
+  function renderBuilding(){
+    const code = params.get("code") || "A";
+    const info = buildings[code];
+    const buildEl = document.getElementById("content");
+    const items = departments.filter(d => d.building === code).sort((a,b)=>Number(a.floor)-Number(b.floor)||a.name.localeCompare(b.name,'no'));
+    const grouped = {};
+    items.forEach(i => (grouped[i.floor] ??= []).push(i));
+
+    buildEl.innerHTML = `
+      <div class="hero">
+        <h1>${info.label}</h1>
+        <p>${info.desc}</p>
+        <p><strong>Inngang:</strong> ${info.entry}</p>
+      </div>
+      ${Object.keys(grouped).sort((a,b)=>Number(a)-Number(b)).map(floor => `
+        <div class="section">
+          <h2>${floor}. etasje</h2>
+          <div class="list">
+            ${grouped[floor].map(item => `
+              <a class="rowbtn" href="department.html?id=${item.id}">
+                <span>${item.name}</span>
+                <span class="muted">${item.zone}</span>
+              </a>
+            `).join("")}
+          </div>
+        </div>
+      `).join("")}
+    `;
+  }
+
+  function renderDepartment(){
+    const item = byId[params.get("id")];
+    const el = document.getElementById("content");
+    if (!item) {
+      el.innerHTML = `<div class="card result"><h2>Fant ikke avdeling</h2></div>`;
+      return;
+    }
+    const copyText = `${item.name} – ${item.building}-bygget, ${item.floor}. etasje. Beste inngang: ${item.bestEntrance}.`;
+    el.innerHTML = `
+      <div class="hero">
+        <h1>${item.name}</h1>
+        <p>${item.category}</p>
+        <div class="badges">
+          <span class="badge ${buildingClass(item.building)}">${item.building}-bygget</span>
+          <span class="badge">${item.floor}. etasje</span>
+          <span class="badge">${item.zone}</span>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="section kv">
+          <div><strong>Bygg</strong><br>${item.building}-bygget</div>
+          <div><strong>Etasje</strong><br>${item.floor}. etasje</div>
+          <div><strong>Sone</strong><br>${item.zone}</div>
+        </div>
+        <div class="section kv">
+          <div><strong>Beste inngang</strong><br>${item.bestEntrance}</div>
+          <div><strong>Slik finner du fram</strong><br>${item.routeHint}</div>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <a class="button" href="building.html?code=${item.building}">Åpne bygg</a>
+        <button class="button" id="copyBtn" type="button">Kopier info</button>
+      </div>
+    `;
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(copyText);
+        document.getElementById("copyBtn").textContent = "Kopiert";
+        setTimeout(() => document.getElementById("copyBtn").textContent = "Kopier info", 1200);
+      } catch {}
+    });
+  }
+
+  function renderPractical(){
+    const el = document.getElementById("content");
+    el.innerHTML = `
+      <div class="hero">
+        <h1>Praktisk informasjon</h1>
+        <p>Kort og oversiktlig info før du drar.</p>
+      </div>
+      <div class="section kv">
+        <div><strong>Adresse</strong><br>${site.address}</div>
+        <div><strong>Telefon</strong><br><a href="tel:${site.phone.replace(/\s+/g, "")}">${site.phone}</a></div>
+        <div><strong>Parkering</strong><br>${site.parking}</div>
+      </div>
+      <div class="section">
+        <h2>Åpningstider</h2>
+        <div class="list">
+          ${site.hours.map(h => `<div class="list-item">${h}</div>`).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  if (page === "index") renderIndex();
+  if (page === "search") renderSearch();
+  if (page === "building") renderBuilding();
+  if (page === "department") renderDepartment();
+  if (page === "practical") renderPractical();
 })();

@@ -4,36 +4,28 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0c1218" />
-  <title>SUS Ullandhaug Navigator</title>
+  <title>Søk</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="favicon.svg" />
 </head>
-<body data-page="index">
+<body data-page="search">
   <div class="shell">
     <div class="topbar">
-
+      <a class="back" href="index.html" aria-label="Tilbake">←</a>
       <div class="brand">SUS Ullandhaug Navigator</div>
     </div>
     <main class="page">
 
     <section class="hero">
-      <h1>Finn riktig bygg uten å scrolle langt</h1>
-      <p>Søk eller velg bygg. Hver del åpnes som egen side med tilbakeknapp.</p>
+      <h1>Søkeresultat</h1>
+      <p id="count" class="muted"></p>
       <form id="searchForm" class="searchbox">
-        <input id="searchInput" placeholder="Søk etter avdeling, for eksempel akutt, barn eller radiologi" />
-        <button class="button" type="submit">Søk</button>
+        <input id="searchInput" placeholder="Nytt søk" />
+        <button class="button" type="submit">Søk på nytt</button>
       </form>
     </section>
-    <section class="section">
-      <h2>Hurtigvalg</h2>
-      <div id="quick" class="quick-grid"></div>
-    </section>
-    <section class="section">
-      <h2>Velg bygg</h2>
-      <div id="buildings" class="building-grid"></div>
-    </section>
-    <a class="button" href="practical.html">Praktisk info</a>
+    <section id="results" class="stack"></section>
 
     </main>
     <div class="footer-note">Bygd som oversiktlige enkeltsider for å unngå scrolling i ett langt visningsbilde.</div>
