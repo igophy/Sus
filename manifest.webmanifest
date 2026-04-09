@@ -1,1 +1,9 @@
-{"name":"SUS Ullandhaug Navigator v3","short_name":"SUS Navigator","start_url":"./","display":"standalone","background_color":"#0b1219","theme_color":"#0b1219","description":"Finn bygg, etasje og inngang på SUS Ullandhaug","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]}
+{
+  "name": "SUS Ullandhaug Navigator",
+  "short_name": "SUS Navigator",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0c1218",
+  "theme_color": "#0c1218",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]
+}
