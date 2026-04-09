@@ -3,41 +3,100 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#0c1218" />
-  <title>SUS Ullandhaug Navigator</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="theme-color" content="#0f1722" />
+  <meta name="description" content="Finn avdeling, bygg og etasje på SUS Ullandhaug" />
+  <title>SUS Ullandhaug Navigator v3</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
-<body data-page="index">
-  <div class="shell">
-    <div class="topbar">
+<body>
+  <div id="app">
+    <header class="hero">
+      <div class="hero__text">
+        <p class="eyebrow">SUS Ullandhaug Navigator</p>
+        <h1>Finn riktig bygg på få sekunder</h1>
+        <p class="lead">Søk etter avdeling, se hvilket bygg den ligger i, hvilken etasje du skal til, og hvilken inngang som passer best.</p>
+      </div>
 
-      <div class="brand">SUS Ullandhaug Navigator</div>
-    </div>
-    <main class="page">
+      <div class="hero__panel panel">
+        <label for="searchInput" class="label">Søk etter avdeling, fagområde eller vanlig ord</label>
+        <input id="searchInput" type="search" placeholder="f.eks. akutt, røntgen, barn, føde, blodprøve" autocomplete="off" />
+        <div class="toolbar">
+          <select id="buildingFilter" aria-label="Filtrer på bygg">
+            <option value="Alle">Alle bygg</option><option value="A">A-bygget</option><option value="B">B-bygget</option><option value="C">C-bygget</option><option value="D">D-bygget</option>
+          </select>
+          <select id="categoryFilter" aria-label="Filtrer på kategori"><option value="Alle">Alle kategorier</option></select>
+          <select id="floorFilter" aria-label="Filtrer på etasje"><option value="Alle">Alle etasjer</option></select>
+        </div>
+        <div class="toolbar toolbar--tight">
+          <button id="toggleViewBtn" class="button button--secondary" type="button">Kompakt visning</button>
+          <button id="clearBtn" class="button button--ghost" type="button">Nullstill</button>
+        </div>
+        <p class="micro">Denne appen gjelder SUS Ullandhaug.</p>
+      </div>
+    </header>
 
-    <section class="hero">
-      <h1>Finn riktig bygg uten å scrolle langt</h1>
-      <p>Søk eller velg bygg. Hver del åpnes som egen side med tilbakeknapp.</p>
-      <form id="searchForm" class="searchbox">
-        <input id="searchInput" placeholder="Søk etter avdeling, for eksempel akutt, barn eller radiologi" />
-        <button class="button" type="submit">Søk</button>
-      </form>
-    </section>
-    <section class="section">
-      <h2>Hurtigvalg</h2>
-      <div id="quick" class="quick-grid"></div>
-    </section>
-    <section class="section">
-      <h2>Velg bygg</h2>
-      <div id="buildings" class="building-grid"></div>
-    </section>
-    <a class="button" href="practical.html">Praktisk info</a>
+    <section class="quick panel"><div><h2>Hurtigvalg</h2><p class="muted">Trykk på det du skal til mest sannsynlig.</p></div><div id="quickActions" class="chips"></div></section>
+    <section class="quick panel"><div><h2>Velg bygg</h2><p class="muted">Når adresse ikke er nok, er bygg det viktigste.</p></div><div id="buildingButtons" class="building-selector"></div></section>
 
+    <nav class="tabs" aria-label="Navigasjon">
+      <button data-tab="results" class="tab tab--active">Finn avdeling</button>
+      <button data-tab="buildings" class="tab">Bygg</button>
+      <button data-tab="places" class="tab">Mine steder</button>
+      <button data-tab="practical" class="tab">Praktisk</button>
+    </nav>
+
+    <main class="main-grid">
+      <section id="resultsTab" class="tab-panel tab-panel--active">
+        <div class="panel section-head"><div><h2 id="resultsTitle">Treff</h2><p class="muted">Bygg er gjort ekstra tydelig i hvert treff.</p></div><div id="statusText" class="status"></div></div>
+        <div id="warningBox" class="notice" hidden></div>
+        <div id="resultsList" class="card-list"></div>
+      </section>
+
+      <section id="buildingsTab" class="tab-panel" hidden>
+        <div class="panel section-head"><div><h2>Byggoversikt</h2><p class="muted">Se hvilke avdelinger som finnes i hvert bygg, gruppert per etasje.</p></div></div>
+        <div id="buildingOverview" class="stack"></div>
+      </section>
+
+      <section id="placesTab" class="tab-panel" hidden>
+        <div class="panel section-head"><div><h2>Mine steder</h2><p class="muted">Favoritter, nylig åpnet og siste søk lagres lokalt på enheten.</p></div></div>
+        <div class="split">
+          <div class="panel"><h3>Favoritter</h3><div id="favoritesList" class="stack"></div></div>
+          <div class="panel"><h3>Nylig åpnet</h3><div id="recentList" class="stack"></div></div>
+        </div>
+        <div class="panel"><h3>Siste søk</h3><div id="recentSearches" class="chips"></div></div>
+      </section>
+
+      <section id="practicalTab" class="tab-panel" hidden>
+        <div class="panel section-head"><div><h2>Praktisk info</h2><p class="muted">Kort, tydelig og nyttig før du drar.</p></div></div>
+        <div class="practical-grid">
+          <div class="panel"><h3>Adresse og kontakt</h3><p><strong>Adresse:</strong> <span id="addressText"></span></p><p><strong>Telefon:</strong> <a id="phoneLink" href="#"></a></p><div class="button-row"><button id="openMapsBtn" class="button" type="button">Åpne i kart</button><button id="callBtn" class="button button--secondary" type="button">Ring</button></div></div>
+          <div class="panel"><h3>Parkering</h3><div id="parkingBox"></div></div>
+          <div class="panel"><h3>Åpningstider</h3><div id="hoursBox" class="stack"></div></div>
+          <div class="panel"><h3>Transport og droppsoner</h3><div id="transportBox"></div></div>
+        </div>
+      </section>
+
+      <aside class="aside">
+        <section class="panel"><h2>Valgt bygg</h2><div id="buildingSummary"></div></section>
+        <section class="panel"><h2>Tips</h2><ul class="tips"><li>Akuttmottak bruker egen inngang.</li><li>I helg bruker du hovedinngang A for B-, C- og D-bygget.</li><li>Favoritter og nylig åpnet gjør neste besøk raskere.</li></ul></section>
+        <section class="panel"><h2>Del oppmøteinfo</h2><p class="muted">Åpne en avdeling og bruk Del eller Kopier.</p></section>
+      </aside>
     </main>
-    <div class="footer-note">Bygd som oversiktlige enkeltsider for å unngå scrolling i ett langt visningsbilde.</div>
   </div>
+
+  <template id="departmentCardTemplate">
+    <article class="department-card">
+      <div class="department-card__top"><div><h3 class="department-card__name"></h3><p class="muted department-card__category"></p></div><button class="icon-button favorite-btn" type="button" aria-label="Lagre som favoritt">☆</button></div>
+      <div class="building-line"><span class="building-badge"></span><span class="floor-badge"></span><span class="zone-badge meta-pill"></span></div>
+      <p class="department-card__route"><strong>Beste inngang:</strong> <span class="entry-text"></span></p>
+      <p class="department-card__hint"></p>
+      <div class="button-row"><button class="button details-btn" type="button">Vis detaljer</button><button class="button button--secondary copy-btn" type="button">Kopier info</button><button class="button button--ghost share-btn" type="button">Del</button></div>
+      <div class="details-box" hidden></div>
+    </article>
+  </template>
+
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

@@ -1,13 +1,18 @@
-# SUS Ullandhaug Navigator v4
+# SUS Ullandhaug Navigator v3
 
-Denne versjonen er bygget som en oversiktlig fler-siders app.
-Målet er at brukeren skal forholde seg til ett visningsbilde om gangen, i stedet for å scrolle ned gjennom én lang side.
+Statisk webapp som fungerer direkte på GitHub Pages uten build-steg.
 
-## Struktur
-- `index.html` – startside
-- `search.html` – søkeresultat
-- `building.html` – valgt bygg
-- `department.html` – valgt avdeling
-- `practical.html` – praktisk info
+## Innhold
+- tydelig byggmarkering på alle avdelingskort
+- hurtigvalg for vanlige mål
+- byggoversikt uten kart
+- kompakt og detaljert visning
+- favoritter
+- nylig åpnet
+- siste søk
+- del og kopier-funksjon
+- mørkere, mer moderne design
 
-Alle sidene fungerer direkte på GitHub Pages.
+## Publisering på GitHub Pages
+Last opp filene i denne mappen direkte til repoet eller til docs/.
+Pass på at index.html ligger i roten av det som publiseres.
