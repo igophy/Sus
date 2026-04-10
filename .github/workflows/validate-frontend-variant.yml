@@ -1,0 +1,30 @@
+name: Validate frontend variant
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ensure-single-variant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if both legacy and bundled frontend are present
+        run: |
+          set -euo pipefail
+
+          legacy_count=0
+          bundled_count=0
+
+          [[ -f "app.js" ]] && legacy_count=$((legacy_count + 1))
+          [[ -f "data.js" ]] && legacy_count=$((legacy_count + 1))
+          [[ -f "index-Dm9RTJdR.js" ]] && bundled_count=$((bundled_count + 1))
+          [[ -f "index-D8sbqhOo.css" ]] && bundled_count=$((bundled_count + 1))
+
+          if [[ "$legacy_count" -gt 0 && "$bundled_count" -gt 0 ]]; then
+            echo "Both frontend variants detected. Keep only one variant in deploy artifacts."
+            exit 1
+          fi
+
+          echo "Frontend variant check passed."
